@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>夏躺梗圖產生器</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand"><span class="brand-mark">夏</span><span>夏躺梗圖產生器</span></div>
+    <div id="syncStatus" class="sync-status" aria-live="polite">正在同步內梗…</div>
+  </header>
+
+  <main class="workspace">
+    <section class="preview-panel" aria-labelledby="previewTitle">
+      <div class="panel-heading">
+        <div><h1 id="previewTitle">即時預覽</h1><p id="imageInfo">尚未載入圖片</p></div>
+        <button id="autoLayoutButton" type="button" class="button secondary" disabled>重新自動排版</button>
+      </div>
+
+      <div id="canvasShell" class="canvas-shell empty">
+        <canvas id="editorCanvas" aria-label="梗圖預覽畫布"></canvas>
+        <div id="emptyState" class="empty-state">
+          <strong>把圖片拖到這裡</strong>
+          <span>或使用下方按鈕選擇 JPG、PNG、WebP</span>
+        </div>
+      </div>
+
+      <div id="dropZone" class="drop-zone">
+        <input id="imageInput" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+        <label for="imageInput" class="button secondary file-button">選擇圖片</label>
+        <button id="removeImageButton" type="button" class="button ghost" disabled>移除圖片</button>
+        <span>圖片只在這台電腦處理，不會上傳</span>
+      </div>
+    </section>
+
+    <aside class="control-panel" aria-label="文字與輸出設定">
+      <section class="control-section">
+        <div class="section-title"><h2>內梗文字</h2><button id="syncButton" type="button" class="text-button">立即同步</button></div>
+        <div class="field-row">
+          <label class="field"><span>集數</span><select id="episodeSelect"><option value="">載入中…</option></select></label>
+          <label class="field wide"><span>內梗</span><select id="jokeSelect"><option value="">請先選集數</option></select></label>
+        </div>
+        <label class="field"><span>顯示文字</span><textarea id="textInput" rows="3" placeholder="選擇內梗或直接輸入文字"></textarea></label>
+      </section>
+
+      <section class="control-section">
+        <h2>文字樣式</h2>
+        <label class="field"><span>字型</span>
+          <select id="fontFamily">
+            <option value="Microsoft JhengHei">微軟正黑體</option>
+            <option value="Noto Sans TC">Noto Sans TC</option>
+            <option value="DFKai-SB">標楷體</option>
+          </select>
+        </label>
+        <label class="field range-field"><span>字級 <output id="fontSizeOutput">64 px</output></span><input id="fontSize" type="range" min="20" max="180" value="64"></label>
+        <label class="field range-field"><span>行距 <output id="lineHeightOutput">1.25</output></span><input id="lineHeight" type="range" min="100" max="180" value="125"></label>
+        <div class="field-row compact">
+          <label class="field color-field"><span>文字</span><input id="textColor" type="color" value="#ffffff"></label>
+          <label class="field color-field"><span>描邊</span><input id="strokeColor" type="color" value="#111111"></label>
+          <label class="field range-field"><span>描邊 <output id="strokeWidthOutput">4 px</output></span><input id="strokeWidth" type="range" min="0" max="14" value="4"></label>
+        </div>
+        <div class="field-row compact">
+          <label class="field"><span>對齊</span><select id="textAlign"><option value="left">靠左</option><option value="center">置中</option><option value="right">靠右</option></select></label>
+          <label class="toggle-field"><input id="shadowEnabled" type="checkbox" checked><span>陰影</span></label>
+          <label class="toggle-field"><input id="backgroundEnabled" type="checkbox"><span>半透明底色</span></label>
+        </div>
+      </section>
+
+      <section class="control-section">
+        <h2>輸出</h2>
+        <div class="field-row compact">
+          <label class="field"><span>格式</span><select id="outputFormat"><option value="png">PNG</option><option value="jpeg">JPG</option></select></label>
+          <label id="qualityField" class="field range-field hidden"><span>畫質 <output id="qualityOutput">92%</output></span><input id="jpegQuality" type="range" min="60" max="100" value="92"></label>
+        </div>
+        <label class="field"><span>檔名</span><input id="fileName" type="text" value="夏躺梗圖"></label>
+        <button id="downloadButton" type="button" class="button primary full" disabled>下載 PNG</button>
+        <p class="hint">輸出維持原圖尺寸，不裁切、不拉伸。</p>
+      </section>
+    </aside>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="assets/app.js"></script>
+</body>
+</html>
