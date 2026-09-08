@@ -659,7 +659,14 @@
 
   elements.mobileTabs.addEventListener('click', event => {
     const button = event.target.closest('[data-mobile-panel]');
-    if (button) openMobilePanel(button.dataset.mobilePanel);
+    if (!button) return;
+    const isCurrentPanel = button.classList.contains('active');
+    const isOpen = elements.controlPanel.classList.contains('is-open');
+    if (isCurrentPanel && isOpen) {
+      closeMobilePanel();
+      return;
+    }
+    openMobilePanel(button.dataset.mobilePanel);
   });
   elements.mobilePanelCloseButton.addEventListener('click', closeMobilePanel);
   elements.moreStyleButton.addEventListener('click', () => {
