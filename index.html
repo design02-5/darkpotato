@@ -16,7 +16,7 @@
     <section class="preview-panel" aria-labelledby="previewTitle">
       <div class="panel-heading">
         <div><h1 id="previewTitle">即時預覽</h1><p id="imageInfo">尚未載入圖片</p></div>
-        <button id="autoLayoutButton" type="button" class="button secondary" disabled>重新自動排版</button>
+        <div class="preview-actions"><label for="imageInput" class="button secondary mobile-only">換圖</label><button id="autoLayoutButton" type="button" class="button secondary desktop-auto" disabled>重新自動排版</button></div>
       </div>
 
       <div id="canvasShell" class="canvas-shell empty">
@@ -35,8 +35,17 @@
       </div>
     </section>
 
-    <aside class="control-panel" aria-label="文字與輸出設定">
-      <section class="control-section">
+    <aside id="controlPanel" class="control-panel" aria-label="文字與輸出設定">
+      <button id="mobilePanelCloseButton" class="mobile-panel-handle mobile-only" type="button" aria-label="關閉設定面板"><span></span></button>
+      <section class="control-section mobile-only" data-panel-content="image">
+        <h2>圖片</h2>
+        <div class="mobile-image-actions">
+          <label for="imageInput" class="button primary">選擇／更換圖片</label>
+          <button id="mobileAutoLayoutButton" type="button" class="button secondary" disabled>重新自動排版</button>
+          <button id="mobileRemoveImageButton" type="button" class="button ghost" disabled>移除圖片</button>
+        </div>
+      </section>
+      <section class="control-section" data-panel-content="text">
         <div class="section-title"><h2>內梗文字</h2><button id="syncButton" type="button" class="text-button">立即同步</button></div>
         <div class="field-row">
           <label class="field"><span>集數</span><select id="episodeSelect"><option value="">載入中…</option></select></label>
@@ -45,8 +54,8 @@
         <label class="field"><span>顯示文字</span><textarea id="textInput" rows="3" placeholder="選擇內梗或直接輸入文字"></textarea></label>
       </section>
 
-      <section class="control-section">
-        <h2>文字樣式</h2>
+      <section class="control-section" data-panel-content="style">
+        <div class="section-title"><h2>文字樣式</h2><button id="moreStyleButton" type="button" class="text-button mobile-only" aria-expanded="false">更多設定</button></div>
         <label class="field"><span>字型</span>
           <select id="fontFamily">
             <option value="Microsoft JhengHei">微軟正黑體</option>
@@ -55,20 +64,22 @@
           </select>
         </label>
         <label class="field range-field"><span>字級 <output id="fontSizeOutput">64 px</output></span><input id="fontSize" type="range" min="20" max="180" value="64"></label>
-        <label class="field range-field"><span>行距 <output id="lineHeightOutput">1.25</output></span><input id="lineHeight" type="range" min="100" max="180" value="125"></label>
         <div class="field-row compact">
           <label class="field color-field"><span>文字</span><input id="textColor" type="color" value="#ffffff"></label>
           <label class="field color-field"><span>描邊</span><input id="strokeColor" type="color" value="#111111"></label>
           <label class="field range-field"><span>描邊 <output id="strokeWidthOutput">4 px</output></span><input id="strokeWidth" type="range" min="0" max="14" value="4"></label>
         </div>
-        <div class="field-row compact">
-          <label class="field"><span>對齊</span><select id="textAlign"><option value="left">靠左</option><option value="center">置中</option><option value="right">靠右</option></select></label>
-          <label class="toggle-field"><input id="shadowEnabled" type="checkbox" checked><span>陰影</span></label>
-          <label class="toggle-field"><input id="backgroundEnabled" type="checkbox"><span>半透明底色</span></label>
+        <div id="advancedStyleFields" class="advanced-style-fields">
+          <label class="field range-field"><span>行距 <output id="lineHeightOutput">1.25</output></span><input id="lineHeight" type="range" min="100" max="180" value="125"></label>
+          <div class="field-row compact">
+            <label class="field"><span>對齊</span><select id="textAlign"><option value="left">靠左</option><option value="center">置中</option><option value="right">靠右</option></select></label>
+            <label class="toggle-field"><input id="shadowEnabled" type="checkbox" checked><span>陰影</span></label>
+            <label class="toggle-field"><input id="backgroundEnabled" type="checkbox"><span>半透明底色</span></label>
+          </div>
         </div>
       </section>
 
-      <section class="control-section">
+      <section class="control-section" data-panel-content="download">
         <h2>輸出</h2>
         <div class="field-row compact">
           <label class="field"><span>格式</span><select id="outputFormat"><option value="png">PNG</option><option value="jpeg">JPG</option></select></label>
@@ -80,6 +91,13 @@
       </section>
     </aside>
   </main>
+
+  <nav id="mobileTabs" class="mobile-tabs" aria-label="編輯工具">
+    <button type="button" data-mobile-panel="image">圖片</button>
+    <button type="button" data-mobile-panel="text" class="active" aria-selected="true">文字</button>
+    <button type="button" data-mobile-panel="style">樣式</button>
+    <button type="button" data-mobile-panel="download">下載</button>
+  </nav>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="assets/app.js"></script>

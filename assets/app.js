@@ -38,6 +38,13 @@
     qualityOutput: document.getElementById('qualityOutput'),
     fileName: document.getElementById('fileName'),
     downloadButton: document.getElementById('downloadButton'),
+    controlPanel: document.getElementById('controlPanel'),
+    mobileTabs: document.getElementById('mobileTabs'),
+    mobilePanelCloseButton: document.getElementById('mobilePanelCloseButton'),
+    moreStyleButton: document.getElementById('moreStyleButton'),
+    advancedStyleFields: document.getElementById('advancedStyleFields'),
+    mobileAutoLayoutButton: document.getElementById('mobileAutoLayoutButton'),
+    mobileRemoveImageButton: document.getElementById('mobileRemoveImageButton'),
     toast: document.getElementById('toast')
   };
 
@@ -57,7 +64,15 @@
     dragOffsetY: 0,
     resizeStartY: 0,
     resizeStartSize: 64,
-    toastTimer: null
+    toastTimer: null,
+    activePointers: new Map(),
+    gestureMode: null,
+    tapStart: null,
+    pinchStartDistance: 0,
+    pinchStartSize: 64,
+    panelTouchStartY: null,
+    savedEpisode: '',
+    savedJoke: ''
   };
 
   function showToast(message) {
@@ -75,7 +90,9 @@
   function loadPreferences() {
     try {
       const saved = JSON.parse(localStorage.getItem(PREF_KEY) || '{}');
-      const keys = ['fontFamily', 'fontSize', 'lineHeight', 'textColor', 'strokeColor', 'strokeWidth', 'textAlign', 'shadowEnabled', 'backgroundEnabled', 'outputFormat', 'jpegQuality'];
+      state.savedEpisode = saved.episodeSelect || '';
+      state.savedJoke = saved.jokeSelect || '';
+      const keys = ['fontFamily', 'fontSize', 'lineHeight', 'textColor', 'strokeColor', 'strokeWidth', 'textAlign', 'shadowEnabled', 'backgroundEnabled', 'outputFormat', 'jpegQuality', 'textInput', 'fileName'];
       keys.forEach(key => {
         if (!(key in saved) || !elements[key]) return;
         if (elements[key].type === 'checkbox') elements[key].checked = Boolean(saved[key]);
@@ -89,7 +106,7 @@
 
   function savePreferences() {
     const values = {};
-    ['fontFamily', 'fontSize', 'lineHeight', 'textColor', 'strokeColor', 'strokeWidth', 'textAlign', 'shadowEnabled', 'backgroundEnabled', 'outputFormat', 'jpegQuality'].forEach(key => {
+    ['fontFamily', 'fontSize', 'lineHeight', 'textColor', 'strokeColor', 'strokeWidth', 'textAlign', 'shadowEnabled', 'backgroundEnabled', 'outputFormat', 'jpegQuality', 'textInput', 'fileName', 'episodeSelect', 'jokeSelect'].forEach(key => {
       values[key] = elements[key].type === 'checkbox' ? elements[key].checked : elements[key].value;
     });
     localStorage.setItem(PREF_KEY, JSON.stringify(values));
@@ -123,8 +140,9 @@
       return;
     }
     episodes.forEach(episode => elements.episodeSelect.append(new Option(episode, episode)));
-    elements.episodeSelect.value = episodes.includes(preferredEpisode) ? preferredEpisode : episodes[0];
-    populateJokes();
+    const wantedEpisode = preferredEpisode || state.savedEpisode;
+    elements.episodeSelect.value = episodes.includes(wantedEpisode) ? wantedEpisode : episodes[0];
+    populateJokes(state.savedJoke);
   }
 
   function populateJokes(preferredJoke = '') {
@@ -242,12 +260,15 @@
       elements.imageInfo.textContent = `${image.naturalWidth} × ${image.naturalHeight} px｜${file.name}`;
       elements.canvasShell.classList.remove('empty');
       elements.autoLayoutButton.disabled = false;
+      elements.mobileAutoLayoutButton.disabled = false;
       elements.downloadButton.disabled = false;
       elements.removeImageButton.disabled = false;
+      elements.mobileRemoveImageButton.disabled = false;
       autoLayout();
       updateOutputs();
       savePreferences();
       showToast('圖片已載入');
+      closeMobilePanel();
     };
     image.onerror = () => {
       URL.revokeObjectURL(url);
@@ -279,10 +300,13 @@
     elements.canvasShell.classList.add('empty');
     elements.imageInfo.textContent = '尚未載入圖片';
     elements.autoLayoutButton.disabled = true;
+    elements.mobileAutoLayoutButton.disabled = true;
     elements.downloadButton.disabled = true;
     elements.removeImageButton.disabled = true;
+    elements.mobileRemoveImageButton.disabled = true;
     elements.fileName.value = '夏躺梗圖';
     showToast('圖片已移除');
+    openMobilePanel('image');
   }
 
   function analyzeRegion(x, y, width, height) {
@@ -458,25 +482,80 @@
     return Math.hypot(point.x - hx, point.y - hy) <= radius;
   }
 
+  function isMobileLayout() {
+    return window.matchMedia('(max-width: 960px)').matches;
+  }
+
+  function openMobilePanel(name) {
+    if (!isMobileLayout()) return;
+    elements.controlPanel.classList.add('is-open');
+    document.querySelectorAll('[data-panel-content]').forEach(section => section.classList.toggle('mobile-active', section.dataset.panelContent === name));
+    document.querySelectorAll('[data-mobile-panel]').forEach(button => {
+      const active = button.dataset.mobilePanel === name;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-selected', String(active));
+    });
+  }
+
+  function closeMobilePanel() {
+    elements.controlPanel.classList.remove('is-open');
+  }
+
+  function pointerDistance() {
+    const points = Array.from(state.activePointers.values());
+    if (points.length < 2) return 0;
+    return Math.hypot(points[1].clientX - points[0].clientX, points[1].clientY - points[0].clientY);
+  }
+
+  function beginPinch() {
+    state.gestureMode = 'pinch';
+    state.dragging = false;
+    state.resizing = false;
+    state.pinchStartDistance = pointerDistance();
+    state.pinchStartSize = Number(elements.fontSize.value);
+  }
+
+  function updatePinch() {
+    const distance = pointerDistance();
+    if (!distance || !state.pinchStartDistance) return;
+    const min = Number(elements.fontSize.min);
+    const max = Number(elements.fontSize.max);
+    const next = Math.round(state.pinchStartSize * distance / state.pinchStartDistance);
+    elements.fontSize.value = String(Math.max(min, Math.min(max, next)));
+    updateOutputs();
+    draw(true);
+  }
+
   function pointerDown(event) {
     if (!state.image || !elements.textInput.value) return;
+    state.activePointers.set(event.pointerId, { clientX: event.clientX, clientY: event.clientY });
+    elements.canvas.setPointerCapture(event.pointerId);
+    if (state.activePointers.size === 2) {
+      beginPinch();
+      return;
+    }
     const point = imagePointFromEvent(event);
+    state.tapStart = { clientX: event.clientX, clientY: event.clientY, time: Date.now(), inside: isInsideBox(point) };
     if (isOnResizeHandle(point)) {
       state.resizing = true;
       state.resizeStartY = point.y;
       state.resizeStartSize = Number(elements.fontSize.value);
-      elements.canvas.setPointerCapture(event.pointerId);
       return;
     }
     if (isInsideBox(point)) {
       state.dragging = true;
       state.dragOffsetX = point.x - state.x;
       state.dragOffsetY = point.y - state.y;
-      elements.canvas.setPointerCapture(event.pointerId);
+      state.gestureMode = 'drag';
     }
   }
 
   function pointerMove(event) {
+    if (state.activePointers.has(event.pointerId)) state.activePointers.set(event.pointerId, { clientX: event.clientX, clientY: event.clientY });
+    if (state.gestureMode === 'pinch') {
+      updatePinch();
+      return;
+    }
     if (!state.dragging && !state.resizing) return;
     const point = imagePointFromEvent(event);
     if (state.dragging) {
@@ -491,10 +570,20 @@
   }
 
   function pointerUp(event) {
+    const tap = state.tapStart;
+    const distance = tap ? Math.hypot(event.clientX - tap.clientX, event.clientY - tap.clientY) : Infinity;
+    const isTap = tap && tap.inside && distance <= 6 && Date.now() - tap.time <= 350 && state.gestureMode !== 'pinch';
+    state.activePointers.delete(event.pointerId);
     state.dragging = false;
     state.resizing = false;
+    if (state.activePointers.size < 2 && state.gestureMode === 'pinch') state.gestureMode = null;
+    if (!state.activePointers.size) state.gestureMode = null;
     if (elements.canvas.hasPointerCapture(event.pointerId)) elements.canvas.releasePointerCapture(event.pointerId);
     savePreferences();
+    if (isTap && isMobileLayout()) {
+      openMobilePanel('text');
+      setTimeout(() => elements.textInput.focus(), 120);
+    }
   }
 
   function safeFileName(value) {
@@ -527,6 +616,8 @@
 
   elements.imageInput.addEventListener('change', () => loadImage(elements.imageInput.files[0]));
   elements.removeImageButton.addEventListener('click', removeImage);
+  elements.mobileRemoveImageButton.addEventListener('click', removeImage);
+  elements.mobileAutoLayoutButton.addEventListener('click', autoLayout);
   ['dragenter', 'dragover'].forEach(type => elements.canvasShell.addEventListener(type, event => {
     event.preventDefault(); elements.canvasShell.classList.add('dragover');
   }));
@@ -541,13 +632,16 @@
   elements.episodeSelect.addEventListener('change', () => {
     populateJokes();
     if (state.imageName) elements.fileName.value = safeFileName(`夏躺_${elements.episodeSelect.value}_${state.imageName}`);
+    savePreferences();
   });
   elements.jokeSelect.addEventListener('change', () => {
     if (!elements.jokeSelect.value) return;
     elements.textInput.value = elements.jokeSelect.value;
     if (state.image) autoLayout();
+    savePreferences();
   });
-  elements.textInput.addEventListener('input', () => draw(true));
+  elements.textInput.addEventListener('input', () => { draw(true); savePreferences(); });
+  elements.fileName.addEventListener('input', savePreferences);
   elements.autoLayoutButton.addEventListener('click', autoLayout);
   elements.syncButton.addEventListener('click', syncSheet);
   elements.downloadButton.addEventListener('click', downloadImage);
@@ -562,6 +656,25 @@
   elements.canvas.addEventListener('pointermove', pointerMove);
   elements.canvas.addEventListener('pointerup', pointerUp);
   elements.canvas.addEventListener('pointercancel', pointerUp);
+
+  elements.mobileTabs.addEventListener('click', event => {
+    const button = event.target.closest('[data-mobile-panel]');
+    if (button) openMobilePanel(button.dataset.mobilePanel);
+  });
+  elements.mobilePanelCloseButton.addEventListener('click', closeMobilePanel);
+  elements.moreStyleButton.addEventListener('click', () => {
+    const expanded = elements.moreStyleButton.getAttribute('aria-expanded') === 'true';
+    elements.moreStyleButton.setAttribute('aria-expanded', String(!expanded));
+    elements.moreStyleButton.textContent = expanded ? '更多設定' : '收起設定';
+    elements.advancedStyleFields.classList.toggle('mobile-collapsed', expanded);
+  });
+  elements.advancedStyleFields.classList.add('mobile-collapsed');
+
+  elements.mobilePanelCloseButton.addEventListener('pointerdown', event => { state.panelTouchStartY = event.clientY; });
+  elements.mobilePanelCloseButton.addEventListener('pointerup', event => {
+    if (state.panelTouchStartY !== null && event.clientY - state.panelTouchStartY > 35) closeMobilePanel();
+    state.panelTouchStartY = null;
+  });
 
   loadPreferences();
   loadCache();
