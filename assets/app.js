@@ -377,10 +377,24 @@
     return elements.textInput.value.split(/\r?\n/).flatMap(paragraph => wrapParagraph(paragraph, maxWidth));
   }
 
+  function getSafeTextWidth() {
+    const fontSize = Number(elements.fontSize.value);
+    const margin = Math.max(12, fontSize * .24);
+    const paragraphs = elements.textInput.value.split(/\r?\n/);
+    const widestParagraph = Math.max(1, ...paragraphs.map(line => ctx.measureText(line).width));
+    const strokeSpace = Math.max(4, Number(elements.strokeWidth.value) * 2);
+    const desiredWidth = widestParagraph + strokeSpace;
+    const maximumWidth = Math.max(fontSize, elements.canvas.width - margin * 2);
+    const width = Math.min(desiredWidth, maximumWidth);
+    state.x = Math.max(margin, Math.min(elements.canvas.width - width - margin, state.x));
+    return width;
+  }
+
   function getTextMetrics() {
     const fontSize = Number(elements.fontSize.value);
     const lineHeight = fontSize * Number(elements.lineHeight.value) / 100;
     ctx.font = `700 ${fontSize}px "${elements.fontFamily.value}", sans-serif`;
+    state.maxWidth = getSafeTextWidth();
     const lines = getLines(state.maxWidth);
     const widths = lines.map(line => ctx.measureText(line).width);
     const width = Math.min(state.maxWidth, Math.max(1, ...widths));
