@@ -4,15 +4,75 @@
  * 每人每天一支：籤號 = hash(裝置代碼 + 台灣日期) % 籤數，同一天重開還是同一支。
  * 裝置代碼存在 localStorage；被清掉就等於換一台裝置（沒有獎品，不需要防作弊）。
  * 預覽：網址加 ?fortune=大吉 指定運勢、?reset 清掉今天的紀錄。
+ *
+ * 籤池來源：Google 試算表「發布到網路」的 CSV（SHEET_CSV），每次開頁讀最新的；
+ * 讀不到（網路問題、還沒設定）就用 signs.js 內建的籤。
+ * 抽到的籤會存起來，當天試算表改了也不會讓已經抽的人換籤。
  */
 (() => {
   'use strict';
+
+  // 夏躺籤池試算表（共用設定要是「知道連結的人都能檢視」）；gid＝分頁編號，換分頁就改 gid
+  const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/1SRJ8WYowdZhfAEpOLeLKiLsolbfcoSWbEHsItqKQqbY/gviz/tq?tqx=out:csv&gid=0';
 
   const $ = id => document.getElementById(id);
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const qs = new URLSearchParams(location.search);
-  const SIGNS = window.SIGNS || [];
+  let SIGNS = window.SIGNS || [];
+  // 預覽可用 ?csv=網址 測試別的試算表
+  const SHEET_CSV = qs.get('csv') || SHEET_CSV_URL;
+
+  /**
+   * 讀試算表 CSV，欄位用標題認、順序不限：
+   *   ID（籤號，選填）、運勢、文字（籤文＋「解曰→」＋解曰 寫在同一格；也接受分開的 籤文／解曰 欄）、
+   *   啟用（填 Y 才抽；沒有這欄＝全部都抽）
+   */
+  async function loadSheet() {
+    if (!SHEET_CSV) return;
+    try {
+      const res = await fetch(SHEET_CSV + (SHEET_CSV.includes('?') ? '&' : '?') + 't=' + Date.now());
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const rows = parseCsv(await res.text());
+      const head = (rows.shift() || []).map(h => h.trim());
+      const col = names => head.findIndex(h => names.includes(h));
+      const id = col(['ID', '籤號']), f = col(['運勢', '建議運勢']), t = col(['文字', '籤文', '情境文字']);
+      const c = col(['解曰', '每日指引']), on = col(['啟用']);
+      if (f < 0 || t < 0) throw new Error('找不到「運勢」「文字」欄');
+      const cell = (r, i) => (i >= 0 ? String(r[i] || '').trim() : '');
+      const list = rows
+        .filter(r => cell(r, f) && cell(r, t) && (on < 0 || /^(Y|YES|V|是|TRUE|1)$/i.test(cell(r, on))))
+        .map(r => {
+          // 「文字」格裡用「解曰→」分開籤文與解曰
+          const [text, inline = ''] = cell(r, t).split(/\s*解曰\s*[→:：]?\s*/);
+          return [cell(r, f), text.trim(), cell(r, c) || inline.trim(), parseInt(cell(r, id), 10) || 0];
+        });
+      if (list.length) SIGNS = list;
+    } catch (err) {
+      console.warn('讀試算表失敗，改用內建籤池', err);
+    }
+  }
+
+  /** 標準 CSV 解析（支援引號內的逗號與換行） */
+  function parseCsv(text) {
+    const rows = [[]];
+    let cell = '', q = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (q) {
+        if (ch === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+        else if (ch === '"') q = false;
+        else cell += ch;
+      } else if (ch === '"') q = true;
+      else if (ch === ',') { rows[rows.length - 1].push(cell); cell = ''; }
+      else if (ch === '\n' || ch === '\r') {
+        if (ch === '\r' && text[i + 1] === '\n') i++;
+        rows[rows.length - 1].push(cell); cell = ''; rows.push([]);
+      } else cell += ch;
+    }
+    rows[rows.length - 1].push(cell);
+    return rows.filter(r => r.some(v => v.trim()));
+  }
 
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
@@ -40,15 +100,22 @@
     return h >>> 0;
   }
 
+  /** 今天已抽過的籤（存的是內容，試算表當天改了也不受影響） */
+  function savedSign() {
+    try { return JSON.parse(store.get(drawnKey)); } catch (e) { return null; }
+  }
+
   function todaySign() {
+    const saved = savedSign();
+    if (saved && saved.fortune && !qs.get('fortune')) return saved;
     let i = hash(deviceId() + '|' + today) % SIGNS.length;
     const force = qs.get('fortune');
     if (force) {
       const j = SIGNS.findIndex(s => s[0] === force);
       if (j >= 0) i = j;
     }
-    const [fortune, text, comment] = SIGNS[i];
-    return { no: i + 1, fortune, text, comment };
+    const [fortune, text, comment, no] = SIGNS[i];
+    return { no: no || i + 1, fortune, text, comment };
   }
 
   // ===================== 畫面 =====================
@@ -73,10 +140,11 @@
     $('hint').textContent = '喀啦喀啦…';
     wrap.classList.add('shaking');
     if (navigator.vibrate) navigator.vibrate([30, 40, 30, 40, 30]);
-    await sleep(1600);
+    // 搖動同時等試算表讀完（最少搖 1.6 秒）
+    await Promise.all([sleep(1600), sheetReady]);
     wrap.classList.remove('shaking');
     const s = todaySign();
-    store.set(drawnKey, '1');
+    store.set(drawnKey, JSON.stringify(s));
     showDrawn(s);
     await sleep(1100);
     showSlip(s, false);
@@ -132,10 +200,14 @@
   // ===================== 啟動 =====================
 
   if (qs.has('reset')) store.del(drawnKey);
+  const sheetReady = loadSheet();
   mountSticks();
   wrap.onclick = btn.onclick = shake;
   $('close').onclick = () => { $('modal').hidden = true; };
   $('modal').onclick = e => { if (e.target === $('modal')) $('modal').hidden = true; };
-  // 今天抽過：直接顯示抽出的籤
-  if (store.get(drawnKey)) showDrawn(todaySign());
+  // 今天抽過：直接顯示抽出的籤（舊版只存 '1'，等籤池讀完再算）
+  if (store.get(drawnKey)) {
+    if ((savedSign() || {}).fortune) showDrawn(todaySign());
+    else sheetReady.then(() => showDrawn(todaySign()));
+  }
 })();
