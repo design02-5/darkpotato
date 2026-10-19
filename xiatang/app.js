@@ -83,6 +83,10 @@
   /** 台灣日期 2026-10-19 */
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   const drawnKey = 'xt_drawn_' + today;
+  // LINE 機器人帶來的參數：?id=籤號&team=戰隊&score=分數
+  const BOT_ID = parseInt(qs.get('id'), 10) || 0;
+  const BOT_TEAM = (qs.get('team') || '').slice(0, 20);
+  const BOT_SCORE = parseInt(qs.get('score'), 10);
 
   function deviceId() {
     let id = store.get('xt_uid');
@@ -106,6 +110,14 @@
   }
 
   function todaySign() {
+    // 從 LINE 機器人來的連結：機器人已經抽好、加好分了，這裡只負責顯示那支籤
+    if (BOT_ID) {
+      const j = SIGNS.findIndex(s => s[3] === BOT_ID);
+      if (j >= 0) {
+        const [fortune, text, comment, no] = SIGNS[j];
+        return { no, fortune, text, comment };
+      }
+    }
     const saved = savedSign();
     if (saved && saved.fortune && !qs.get('fortune')) return saved;
     let i = hash(deviceId() + '|' + today) % SIGNS.length;
@@ -144,7 +156,7 @@
     await Promise.all([sleep(1600), sheetReady]);
     wrap.classList.remove('shaking');
     const s = todaySign();
-    store.set(drawnKey, JSON.stringify(s));
+    if (!BOT_ID) store.set(drawnKey, JSON.stringify(s));
     showDrawn(s);
     await sleep(1100);
     showSlip(s, false);
@@ -170,7 +182,9 @@
       '<p class="slip-text">' + esc(s.text) + '</p>' +
       (s.comment ? '<p class="slip-comment"><em>解曰</em>' + esc(s.comment) + '</p>' : '') +
       '</div>' +
-      '<div class="slip-foot"><span>' + date + (again ? '・今日已抽' : '') + '</span><i class="seal">夏躺</i></div>' +
+      '<div class="slip-foot"><span>' + date + (again ? '・今日已抽' : '') +
+      (BOT_TEAM && !isNaN(BOT_SCORE) ? '<b class="team-score">' + esc(BOT_TEAM) + ' ' + (BOT_SCORE >= 0 ? '+' : '') + BOT_SCORE + '分</b>' : '') +
+      '</span><i class="seal">夏躺</i></div>' +
       '</div></div>';
     $('modal').hidden = false;
     fitSlip($('slip').querySelector('.slip-body'));
@@ -206,7 +220,7 @@
   $('close').onclick = () => { $('modal').hidden = true; };
   $('modal').onclick = e => { if (e.target === $('modal')) $('modal').hidden = true; };
   // 今天抽過：直接顯示抽出的籤（舊版只存 '1'，等籤池讀完再算）
-  if (store.get(drawnKey)) {
+  if (!BOT_ID && store.get(drawnKey)) {
     if ((savedSign() || {}).fortune) showDrawn(todaySign());
     else sheetReady.then(() => showDrawn(todaySign()));
   }
