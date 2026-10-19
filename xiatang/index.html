@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#F3E7D3">
+  <title>夏躺每日一籤</title>
+  <meta property="og:title" content="夏躺每日一籤">
+  <meta property="og:description" content="心裡默念想問的事，搖一搖今天的籤。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&display=swap" rel="stylesheet">
+  <!-- 改了 style.css / app.js / signs.js，把 v= 數字加 1，手機才會抓新檔 -->
+  <link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <div class="eyebrow">DAILY FORTUNE</div>
+      <h1>夏躺每日一籤</h1>
+      <p class="sub" id="sub">心裡默念想問的事，搖一搖今天的籤</p>
+    </header>
+
+    <div class="tube-wrap" id="tubeWrap" role="button" aria-label="搖籤筒">
+      <div class="tube-shadow"></div>
+      <div class="tube-mouth"></div>
+      <div class="sticks" id="sticks"></div>
+      <div class="stick-out" id="stickOut"><span id="stickText"></span></div>
+      <div class="tube"><div class="tube-plaque">蜂神籤</div></div>
+      <div class="tube-lip"></div>
+    </div>
+
+    <button class="btn" id="btn">搖　籤</button>
+    <p class="hint" id="hint">每人每天限抽一支</p>
+  </main>
+
+  <div class="modal" id="modal" hidden>
+    <div class="modal-inner">
+      <div id="slip"></div>
+      <button class="btn ghost" id="close">收下這支籤</button>
+    </div>
+  </div>
+
+  <script src="signs.js?v=1"></script>
+  <script src="app.js?v=1"></script>
+</body>
+</html>

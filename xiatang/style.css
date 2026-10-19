@@ -1,0 +1,181 @@
+/*
+ * 夏躺每日一籤：淺色米紙背景＋實木籤筒＋廟宇籤紙
+ * 配色固定，不吃任何後台設定
+ */
+:root {
+  --paper: #F3E7D3;
+  --paper2: #EAD9BC;
+  --ink: #3A2216;
+  --muted: #8A6A52;
+  --vermilion: #A3242A;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  font-family: "Noto Serif TC", "Songti TC", serif;
+  color: var(--ink);
+  background:
+    radial-gradient(90% 55% at 50% 38%, #FBF4E6 0%, transparent 70%),
+    radial-gradient(140% 90% at 50% 120%, rgba(163, 36, 42, .14), transparent 60%),
+    repeating-linear-gradient(0deg, rgba(120, 80, 30, .025) 0 2px, transparent 2px 6px),
+    linear-gradient(180deg, var(--paper), var(--paper2)) fixed;
+  overflow-x: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.page {
+  min-height: 100svh; max-width: 480px; margin: 0 auto;
+  padding: max(28px, env(safe-area-inset-top)) 16px max(28px, env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+
+/* 標題 */
+.hero { text-align: center; }
+.eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .45em; padding-left: .45em; color: var(--vermilion); }
+.hero h1 { margin: 8px 0 6px; font-size: clamp(30px, 9vw, 38px); font-weight: 900; letter-spacing: .12em; padding-left: .12em; }
+.hero h1::after { content: ""; display: block; width: 44px; height: 2px; margin: 12px auto 0; background: var(--vermilion); opacity: .7; }
+.sub { margin: 0; font-size: 14px; color: var(--muted); letter-spacing: .08em; }
+
+/* 按鈕：朱紅漆 */
+.btn {
+  margin-top: 26px; min-width: 190px; padding: 14px 28px; border: 0; border-radius: 999px; cursor: pointer;
+  font: 900 18px/1 "Noto Serif TC", serif; letter-spacing: .25em; padding-left: calc(28px + .25em);
+  color: #FBEFD9; background: linear-gradient(180deg, #B8343A, var(--vermilion) 55%, #861C21);
+  box-shadow: 0 8px 20px rgba(130, 28, 33, .3), inset 0 1px 0 rgba(255, 255, 255, .25);
+  transition: transform .15s, filter .2s;
+}
+.btn:active { transform: scale(.97); }
+.btn:disabled { filter: saturate(.5) brightness(.95); cursor: default; }
+.btn.ghost { margin-top: 14px; width: 100%; background: rgba(251, 244, 230, .92); color: var(--vermilion); box-shadow: 0 6px 18px rgba(0, 0, 0, .18); font-size: 16px; }
+.hint { margin: 14px 0 0; font-size: 13px; color: var(--muted); letter-spacing: .08em; text-align: center; }
+
+/* 籤詩彈窗 */
+.modal {
+  position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: rgba(58, 34, 22, .42); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+  animation: fadeIn .3s;
+}
+.modal-inner { width: min(100%, 340px); }
+@keyframes fadeIn { from { opacity: 0; } }
+
+/* ===================== 籤筒 ===================== */
+.tube-wrap { position: relative; width: 200px; height: 300px; cursor: pointer; transform-origin: 50% 90%; }
+.tube-wrap.shaking { animation: tubeShake .16s ease-in-out infinite alternate; }
+@keyframes tubeShake {
+  from { transform: rotate(-11deg) translateY(-4px); }
+  to { transform: rotate(11deg) translateY(2px); }
+}
+.tube-wrap:not(.shaking):not(.drawn) { animation: tubeIdle 3s ease-in-out infinite; }
+@keyframes tubeIdle { 0%, 80%, 100% { transform: rotate(0); } 86% { transform: rotate(-5deg); } 93% { transform: rotate(4deg); } }
+
+/* 實木籤筒：固定木色＋朱漆匾，不跟主題配色（跟籤詩紙同一套質感）
+   疊層：筒口內側(0) → 竹籤(1) → 筒身(2) → 筒口前緣(3)，竹籤看起來才是插在筒子裡 */
+.tube-wrap { --wood: #5A2F17; --wood-hi: #8A5530; --lacquer: #8E1C21; --gold: #E2BE72; margin-top: 56px; }
+.tube-shadow { position: absolute; left: 22px; right: 22px; bottom: 0; height: 22px; border-radius: 50%; background: radial-gradient(closest-side, rgba(0, 0, 0, .55), transparent); }
+.tube, .tube-mouth, .tube-lip { position: absolute; left: 32px; width: 136px; }
+.tube-mouth {
+  z-index: 0; bottom: 176px; height: 28px; border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 70%, #140904 40%, #2A160B 75%);
+  box-shadow: 0 0 0 4px var(--wood-hi), 0 0 0 5px rgba(0, 0, 0, .35);
+}
+.sticks { position: absolute; left: 0; right: 0; bottom: 178px; height: 140px; z-index: 1; pointer-events: none; }
+.sticks i {
+  position: absolute; bottom: 0; width: 8px; margin-left: -4px; border-radius: 2px 2px 1px 1px; transform-origin: 50% 100%;
+  background: linear-gradient(90deg, #B98D4E, #E8CF98 40%, #D2B072 60%, #A97C40);
+  box-shadow: inset 0 12px 0 0 #A3242A, 1px 0 2px rgba(0, 0, 0, .25);
+}
+.tube-wrap.shaking .sticks i { animation: stickRattle .12s infinite alternate; }
+.tube-wrap.shaking .sticks i:nth-child(odd) { animation-delay: -.06s; }
+@keyframes stickRattle { to { translate: 0 -8px; } }
+
+.tube {
+  z-index: 2; bottom: 14px; height: 176px; border-radius: 0 0 16px 16px / 0 0 12px 12px;
+  display: flex; align-items: center; justify-content: center;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, .55), rgba(0, 0, 0, .1) 18%, rgba(255, 220, 170, .22) 34%, rgba(255, 220, 170, .06) 48%, rgba(0, 0, 0, .25) 78%, rgba(0, 0, 0, .6)),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, .18) 0 1px, transparent 1px 6px, rgba(255, 200, 140, .07) 6px 7px, transparent 7px 11px),
+    linear-gradient(180deg, var(--wood-hi), var(--wood) 30%, #4A2511);
+  box-shadow: inset 0 -8px 14px rgba(0, 0, 0, .35);
+}
+/* 上下兩道深色箍 */
+.tube::before, .tube::after { content: ""; position: absolute; left: 0; right: 0; height: 6px; background: linear-gradient(90deg, #1E0F07, #4A2A16 35%, #2A150A 70%, #120804); }
+.tube::before { top: 12px; }
+.tube::after { bottom: 14px; }
+.tube-lip {
+  z-index: 3; bottom: 176px; height: 28px; border-radius: 50%; pointer-events: none;
+  border: 4px solid var(--wood-hi); border-top-color: transparent; clip-path: inset(50% 0 0 0);
+  box-shadow: inset 0 -2px 0 rgba(255, 220, 170, .25);
+}
+.tube-plaque {
+  writing-mode: vertical-rl; font-family: "Noto Serif TC", serif; font-weight: 900; font-size: 20px; letter-spacing: .3em;
+  color: var(--gold); padding: 14px 7px 9px; border-radius: 2px;
+  background: linear-gradient(90deg, #6E1216, var(--lacquer) 40%, #A0262B 55%, #6E1216);
+  box-shadow: inset 0 0 0 1.5px var(--gold), inset 0 0 0 4px var(--lacquer), inset 0 0 0 5px rgba(226, 190, 114, .55), 0 3px 8px rgba(0, 0, 0, .45);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .5);
+}
+
+/* 抽出來的那支籤：從筒裡升起 */
+.stick-out {
+  position: absolute; z-index: 1; left: 50%; bottom: 150px; width: 30px; height: 178px; margin-left: -15px;
+  border-radius: 3px 3px 1px 1px; display: flex; justify-content: center; padding-top: 22px;
+  background: linear-gradient(90deg, #B98D4E, #F0DCAA 42%, #D9B77A 60%, #A97C40);
+  box-shadow: inset 0 14px 0 0 #A3242A, 0 0 16px rgba(255, 210, 140, .35);
+  opacity: 0; transform: translateY(150px);
+  transition: transform 1s cubic-bezier(.2, 1.2, .4, 1), opacity .2s;
+}
+.stick-out span { writing-mode: vertical-rl; font-family: "Noto Serif TC", serif; font-size: 22px; font-weight: 900; letter-spacing: .2em; color: #8E1B1B; }
+.stick-out.bad span { color: #3F3A36; }
+.tube-wrap.drawn .stick-out { opacity: 1; transform: translateY(-4px); }
+
+/* 籤詩：仿廟宇籤紙（米紙、朱紅雙框、直書），固定配色不跟主題 */
+.slip {
+  --ink: #2A1A10; --red: #A3242A;
+  padding: 12px; border-radius: 4px; text-align: left; color: var(--ink);
+  font-family: "Noto Serif TC", "Songti TC", serif;
+  background:
+    radial-gradient(120% 80% at 20% 10%, rgba(255, 255, 255, .55), transparent 60%),
+    radial-gradient(90% 70% at 90% 100%, rgba(150, 100, 40, .16), transparent 70%),
+    repeating-linear-gradient(0deg, rgba(120, 80, 30, .035) 0 2px, transparent 2px 5px),
+    #F1E4C6;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .45), 0 2px 0 rgba(255, 255, 255, .4) inset;
+  animation: slipIn .6s cubic-bezier(.2, 1.2, .4, 1);
+}
+@keyframes slipIn { from { transform: translateY(40px) scale(.94); opacity: 0; } }
+.slip-frame { border: 2px solid var(--red); outline: 1px solid var(--red); outline-offset: -6px; padding: 16px 16px 12px; }
+.slip-head { text-align: center; font-size: 13px; font-weight: 700; letter-spacing: .5em; padding-left: .5em; color: var(--red); padding-bottom: 10px; border-bottom: 1px solid color-mix(in srgb, var(--red) 45%, transparent); }
+
+/* 直書：欄位由右到左 */
+.slip-body {
+  writing-mode: vertical-rl; height: min(46vh, 330px); margin: 14px auto 10px; max-width: 100%;
+  overflow: hidden;
+}
+/* 直書下的 block 會由右往左排成一欄一欄，不用 flex（flex 會沿直行方向上下疊） */
+.slip-fortune {
+  padding: 14px 8px; margin-left: 14px; height: fit-content;
+  border: 1.5px solid var(--red); color: var(--red); background: rgba(163, 36, 42, .05);
+}
+.slip-fortune span { display: block; font-size: 14px; font-weight: 700; letter-spacing: .2em; margin-left: 8px; }
+.slip-fortune b { display: block; font-size: 40px; font-weight: 900; letter-spacing: .18em; line-height: 1.1; }
+.slip-text, .slip-comment { margin: 0; font-size: var(--fs, 17px); font-weight: 500; line-height: 2; letter-spacing: .08em; text-align: justify; }
+.slip-text { margin-left: 12px; }
+.slip-comment { padding-right: 12px; border-right: 1px dashed color-mix(in srgb, var(--red) 40%, transparent); }
+.slip-comment em { font-style: normal; font-weight: 900; color: var(--red); margin-bottom: .4em; display: inline-block; letter-spacing: .2em; }
+.slip.bad { --red: #4B4743; }
+
+.slip-foot { display: flex; justify-content: space-between; align-items: flex-end; font-size: 12px; letter-spacing: .15em; color: color-mix(in srgb, var(--ink) 65%, transparent); }
+.seal {
+  font-style: normal; font-weight: 900; font-size: 15px; line-height: 1.05; color: #fff; background: #B3262D;
+  writing-mode: vertical-rl; padding: 6px 4px; border-radius: 3px; transform: rotate(-4deg);
+  box-shadow: 0 0 0 2px #F1E4C6, 0 0 0 3px #B3262D; opacity: .9; mix-blend-mode: multiply;
+}
+
+/* 淺色背景上，籤筒陰影收淡一點 */
+.tube-shadow { background: radial-gradient(closest-side, rgba(70, 40, 20, .35), transparent); }
+.tube-wrap { margin-top: 64px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tube-wrap { animation: none !important; }
+}
